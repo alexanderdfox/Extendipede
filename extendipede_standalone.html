@@ -359,6 +359,9 @@
         <header>
             <h1>Extendipede Web</h1>
             <p>Command Pipeline Simulator - Standalone Version</p>
+            <p style="font-size: 0.9em; color: #888; margin-top: 10px;">
+                🌐 <strong>Website Fetching:</strong> Use curl commands to fetch websites and see the content flow through the pipeline!
+            </p>
         </header>
 
         <div class="controls">
@@ -395,6 +398,9 @@
                     <button class="demo-btn" data-command="date">date</button>
                     <button class="demo-btn" data-command="whoami">whoami</button>
                     <button class="demo-btn" data-command="echo Hello Extendipede!">echo Hello Extendipede!</button>
+                    <button class="demo-btn" data-command="curl -s https://httpbin.org/json">curl JSON API</button>
+                    <button class="demo-btn" data-command="curl -s https://api.github.com">curl GitHub API</button>
+                    <button class="demo-btn" data-command="curl -s https://jsonplaceholder.typicode.com/posts/1">curl Posts API</button>
                 </div>
             </div>
         </div>
@@ -561,6 +567,14 @@
                             resolve('Hello Extendipede!');
                         } else if (command.startsWith('echo ')) {
                             resolve(command.substring(5));
+                        } else if (command === 'curl -s https://httpbin.org/json') {
+                            resolve('{\n  "slideshow": {\n    "author": "Yours Truly",\n    "date": "date of publication",\n    "slides": [\n      {\n        "title": "Wake up to WonderWidgets!",\n        "type": "all"\n      },\n      {\n        "items": [\n          "Why <em>WonderWidgets</em> are great",\n          "Who <em>buys</em> WonderWidgets"\n        ],\n        "title": "Overview",\n        "type": "all"\n      }\n    ],\n    "title": "Sample Slide Show"\n  }\n}');
+                        } else if (command === 'curl -s https://api.github.com') {
+                            resolve('{\n  "current_user_url": "https://api.github.com/user",\n  "current_user_authorizations_html_url": "https://github.com/settings/authorizations",\n  "authorizations_url": "https://api.github.com/authorizations",\n  "code_search_url": "https://api.github.com/search/code?q={query}{&page,per_page,sort,order}",\n  "commit_search_url": "https://api.github.com/search/commits?q={query}{&page,per_page,sort,order}",\n  "emails_url": "https://api.github.com/user/emails",\n  "emojis_url": "https://api.github.com/emojis",\n  "events_url": "https://api.github.com/events",\n  "feeds_url": "https://api.github.com/feeds",\n  "followers_url": "https://api.github.com/user/followers",\n  "following_url": "https://api.github.com/user/following{/target}",\n  "gists_url": "https://api.github.com/gists{/gist_id}",\n  "hub_url": "https://api.github.com/hub",\n  "issue_search_url": "https://api.github.com/search/issues?q={query}{&page,per_page,sort,order}",\n  "issues_url": "https://api.github.com/issues",\n  "keys_url": "https://api.github.com/user/keys",\n  "label_search_url": "https://api.github.com/search/labels?q={query}&repository_id={repository_id}{&page,per_page}",\n  "notifications_url": "https://api.github.com/notifications",\n  "organization_repositories_url": "https://api.github.com/orgs/{org}/repos{?type,page,per_page,sort}",\n  "organization_url": "https://api.github.com/orgs/{org}",\n  "public_gists_url": "https://api.github.com/gists/public",\n  "rate_limit_url": "https://api.github.com/rate_limit",\n  "repository_url": "https://api.github.com/repos/{owner}/{repo}",\n  "repository_search_url": "https://api.github.com/search/repositories?q={query}{&page,per_page,sort,order}",\n  "current_user_repositories_url": "https://api.github.com/user/repos{?type,page,per_page,sort}",\n  "starred_url": "https://api.github.com/user/starred{/owner}{/repo}",\n  "starred_gists_url": "https://api.github.com/gists/starred",\n  "team_url": "https://api.github.com/teams",\n  "user_url": "https://api.github.com/users/{user}",\n  "user_organizations_url": "https://api.github.com/user/orgs",\n  "user_repositories_url": "https://api.github.com/users/{user}/repos{?type,page,per_page,sort}",\n  "user_search_url": "https://api.github.com/search/users?q={query}{&page,per_page,sort,order}"\n}');
+                        } else if (command === 'curl -s https://jsonplaceholder.typicode.com/posts/1') {
+                            resolve('{\n  "userId": 1,\n  "id": 1,\n  "title": "sunt aut facere repellat provident occaecati excepturi optio reprehenderit",\n  "body": "quia et suscipit\\nsuscipit recusandae consequuntur expedita et cum\\nreprehenderit molestiae ut ut quas totam\\nnostrum rerum est autem sunt rem eveniet architecto"\n}');
+                        } else if (command.startsWith('curl ')) {
+                            resolve(`Simulated curl output for: ${command}\nThis would fetch the actual website content in the Flask version.`);
                         } else {
                             resolve(`Command '${command}' executed successfully.\nSimulated output for standalone version.`);
                         }

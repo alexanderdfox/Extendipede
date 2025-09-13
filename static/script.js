@@ -205,7 +205,10 @@ document.addEventListener('DOMContentLoaded', () => {
         'pwd', 
         'date',
         'whoami',
-        'echo Hello Extendipede!'
+        'echo Hello Extendipede!',
+        'curl -s https://httpbin.org/json',
+        'curl -s https://api.github.com',
+        'curl -s https://jsonplaceholder.typicode.com/posts/1'
     ];
     
     // Add demo buttons
