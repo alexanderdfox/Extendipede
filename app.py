@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template, send_from_directory
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import subprocess
 import shlex
@@ -154,12 +154,6 @@ def index():
     """Serve the main page"""
     return render_template('index.html')
 
-@app.route('/<path:filename>')
-def static_files(filename):
-    """Serve static files directly"""
-    if filename in ['style.css', 'script.js']:
-        return send_from_directory('static', filename)
-    return "File not found", 404
 
 @app.route('/api/execute', methods=['POST'])
 def execute():
@@ -213,7 +207,7 @@ if __name__ == '__main__':
     
     print("Extendipede Web Server Starting...")
     print(f"Allowed commands: {len(ALLOWED_COMMANDS)}")
-    print("Open your browser to: http://localhost:5000")
+    print("Open your browser to: http://localhost:8000")
     print("Press Ctrl+C to stop the server")
     
     app.run(debug=True, host='0.0.0.0', port=8000)
