@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extendipede Web</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Extendipede Web</h1>
+            <p>Command Pipeline Simulator</p>
+        </header>
+
+        <div class="controls">
+            <div class="control-group">
+                <label for="numStates">Pipeline States:</label>
+                <input type="number" id="numStates" value="100" min="1" max="200">
+            </div>
+            <div class="control-group">
+                <label for="frequency">AC Frequency (Hz):</label>
+                <input type="number" id="frequency" value="60" min="0.1" max="1000" step="0.1">
+            </div>
+            <div class="control-group">
+                <label for="stepsPerCycle">Steps per Cycle:</label>
+                <input type="number" id="stepsPerCycle" value="40" min="10" max="100">
+            </div>
+            <div class="control-group">
+                <label for="sleepTime">Animation Speed (ms):</label>
+                <input type="number" id="sleepTime" value="50" min="10" max="500">
+            </div>
+        </div>
+
+        <div class="command-section">
+            <div class="input-group">
+                <label for="commandInput">Extendipede></label>
+                <input type="text" id="commandInput" placeholder="Enter command..." autocomplete="off">
+                <button id="runButton">Run</button>
+            </div>
+        </div>
+
+        <div class="pipeline-section">
+            <div class="ac-display">
+                <div class="ac-label">AC Voltage:</div>
+                <div class="ac-value" id="acValue">0.00</div>
+            </div>
+            
+            <div class="current-command">
+                <div class="command-label">Running:</div>
+                <div class="command-value" id="currentCommand">-</div>
+            </div>
+
+            <div class="pipeline-container">
+                <h3>Extendipede Pipeline</h3>
+                <div id="pipelineStages" class="pipeline-stages"></div>
+            </div>
+
+            <div class="output-section">
+                <h3>Command Output</h3>
+                <div id="commandOutput" class="output-display">No command executed yet.</div>
+            </div>
+        </div>
+
+        <div class="status">
+            <div class="status-item">
+                <span class="status-label">Status:</span>
+                <span id="status" class="status-value">Ready</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Cycle:</span>
+                <span id="cycleCount" class="status-value">0</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
