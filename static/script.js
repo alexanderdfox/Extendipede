@@ -12,10 +12,12 @@ class ExtendipedeWeb {
         this.currentCommand = '';
         this.commandOutputText = '';
         this.animationId = null;
+        this.isAuthenticated = false;
         
         this.initializeElements();
         this.setupEventListeners();
         this.updatePipelineDisplay();
+        this.checkAuthenticationStatus();
     }
 
     initializeElements() {
@@ -99,7 +101,118 @@ class ExtendipedeWeb {
         this.animate();
     }
 
+    async checkAuthenticationStatus() {
+        try {
+            const response = await fetch('/auth/status');
+            const result = await response.json();
+            this.isAuthenticated = result.authenticated;
+            
+            if (!this.isAuthenticated) {
+                this.showLoginPrompt();
+            }
+        } catch (error) {
+            console.error('Error checking authentication:', error);
+            this.showLoginPrompt();
+        }
+    }
+
+    async login(username, password) {
+        try {
+            const response = await fetch('/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ username, password })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                this.isAuthenticated = true;
+                this.hideLoginPrompt();
+                return true;
+            } else {
+                return false;
+            }
+        } catch (error) {
+            console.error('Login error:', error);
+            return false;
+        }
+    }
+
+    showLoginPrompt() {
+        // Create login modal
+        const modal = document.createElement('div');
+        modal.id = 'loginModal';
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        `;
+        
+        modal.innerHTML = `
+            <div style="background: #1a1a2e; padding: 30px; border-radius: 10px; border: 1px solid #00ff88; max-width: 400px; width: 90%;">
+                <h2 style="color: #00ff88; text-align: center; margin-bottom: 20px;">Login Required</h2>
+                <div style="margin-bottom: 15px;">
+                    <label style="color: #e0e0e0; display: block; margin-bottom: 5px;">Username:</label>
+                    <input type="text" id="loginUsername" value="admin" style="width: 100%; padding: 8px; background: rgba(255,255,255,0.1); border: 1px solid #00ff88; border-radius: 5px; color: #e0e0e0;">
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label style="color: #e0e0e0; display: block; margin-bottom: 5px;">Password:</label>
+                    <input type="password" id="loginPassword" value="extendipede2024" style="width: 100%; padding: 8px; background: rgba(255,255,255,0.1); border: 1px solid #00ff88; border-radius: 5px; color: #e0e0e0;">
+                </div>
+                <div style="text-align: center;">
+                    <button id="loginButton" style="background: #00ff88; color: #1a1a2e; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Login</button>
+                </div>
+                <div id="loginError" style="color: #ff4444; text-align: center; margin-top: 10px; display: none;"></div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Add event listeners
+        document.getElementById('loginButton').addEventListener('click', async () => {
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            const success = await this.login(username, password);
+            if (success) {
+                modal.remove();
+            } else {
+                document.getElementById('loginError').style.display = 'block';
+                document.getElementById('loginError').textContent = 'Invalid credentials';
+            }
+        });
+        
+        // Allow Enter key to login
+        document.getElementById('loginPassword').addEventListener('keypress', async (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('loginButton').click();
+            }
+        });
+    }
+
+    hideLoginPrompt() {
+        const modal = document.getElementById('loginModal');
+        if (modal) {
+            modal.remove();
+        }
+    }
+
     async executeCommand(command) {
+        if (!this.isAuthenticated) {
+            this.showLoginPrompt();
+            return 'Authentication required';
+        }
+
         try {
             const response = await fetch('/api/execute', {
                 method: 'POST',

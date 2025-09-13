@@ -1,12 +1,75 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, session, g
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import subprocess
 import shlex
 import os
 import json
+import logging
+import time
+import hashlib
+import secrets
+from functools import wraps
+from config import config
 
+# Initialize Flask app
 app = Flask(__name__, static_folder='static', static_url_path='/static')
-CORS(app)  # Enable CORS for all routes
+
+# Load configuration
+config_name = os.environ.get('FLASK_ENV', 'default')
+app.config.from_object(config[config_name])
+
+# Initialize extensions
+CORS(app, origins=app.config['CORS_ORIGINS'])
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    storage_uri=app.config['RATELIMIT_STORAGE_URL'],
+    default_limits=[app.config['RATELIMIT_DEFAULT']]
+)
+
+# Setup logging
+logging.basicConfig(
+    level=getattr(logging, app.config['LOG_LEVEL']),
+    format='%(asctime)s %(levelname)s %(name)s %(message)s',
+    handlers=[
+        logging.FileHandler(app.config['LOG_FILE']),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
+
+# Security decorators
+def require_auth(f):
+    """Require authentication for API endpoints"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('authenticated'):
+            return jsonify({'error': 'Authentication required'}), 401
+        return f(*args, **kwargs)
+    return decorated_function
+
+def log_command_execution(f):
+    """Log command execution for security monitoring"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        start_time = time.time()
+        client_ip = get_remote_address()
+        user_agent = request.headers.get('User-Agent', 'Unknown')
+        
+        logger.info(f"Command execution started from {client_ip} - {user_agent}")
+        
+        try:
+            result = f(*args, **kwargs)
+            execution_time = time.time() - start_time
+            logger.info(f"Command execution completed in {execution_time:.2f}s")
+            return result
+        except Exception as e:
+            execution_time = time.time() - start_time
+            logger.error(f"Command execution failed after {execution_time:.2f}s: {str(e)}")
+            raise
+    return decorated_function
 
 # Allowed commands for security
 ALLOWED_COMMANDS = {
@@ -102,16 +165,35 @@ def is_command_allowed(command_parts):
     return base_command in ALLOWED_COMMANDS
 
 def execute_command(command):
-    """Execute a shell command safely"""
+    """Execute a shell command safely with enhanced security"""
     try:
+        # Validate command length
+        if len(command) > app.config['MAX_COMMAND_LENGTH']:
+            return {
+                'success': False,
+                'output': f"Command too long. Maximum length is {app.config['MAX_COMMAND_LENGTH']} characters.",
+                'error': 'Command too long'
+            }
+        
         # Parse the command
         command_parts = shlex.split(command)
         
         if not is_command_allowed(command_parts):
+            logger.warning(f"Blocked command attempt: {command}")
             return {
                 'success': False,
                 'output': f"Command '{command_parts[0]}' is not allowed for security reasons.",
                 'error': 'Command not in allowed list'
+            }
+        
+        # Additional security checks
+        dangerous_patterns = ['rm -rf', 'sudo', 'su -', 'chmod 777', 'passwd', 'useradd']
+        if any(pattern in command.lower() for pattern in dangerous_patterns):
+            logger.warning(f"Blocked dangerous command: {command}")
+            return {
+                'success': False,
+                'output': "Command contains potentially dangerous operations.",
+                'error': 'Dangerous command blocked'
             }
         
         # Execute the command
@@ -119,8 +201,9 @@ def execute_command(command):
             command_parts,
             capture_output=True,
             text=True,
-            timeout=30,  # 30 second timeout
-            cwd=os.getcwd()  # Run in current directory
+            timeout=app.config['COMMAND_TIMEOUT'],
+            cwd=os.getcwd(),
+            env=os.environ.copy()  # Use current environment
         )
         
         if result.returncode == 0:
@@ -154,8 +237,51 @@ def index():
     """Serve the main page"""
     return render_template('index.html')
 
+@app.route('/auth/login', methods=['POST'])
+@limiter.limit("5 per minute")
+def login():
+    """Simple authentication endpoint"""
+    try:
+        data = request.get_json()
+        username = data.get('username', '').strip()
+        password = data.get('password', '').strip()
+        
+        # Simple authentication (in production, use proper auth)
+        if username == 'admin' and password == 'extendipede2024':
+            session['authenticated'] = True
+            session['username'] = username
+            session.permanent = True
+            logger.info(f"User {username} logged in from {get_remote_address()}")
+            return jsonify({'success': True, 'message': 'Login successful'})
+        else:
+            logger.warning(f"Failed login attempt for {username} from {get_remote_address()}")
+            return jsonify({'success': False, 'message': 'Invalid credentials'}), 401
+            
+    except Exception as e:
+        logger.error(f"Login error: {str(e)}")
+        return jsonify({'success': False, 'message': 'Login failed'}), 500
+
+@app.route('/auth/logout', methods=['POST'])
+def logout():
+    """Logout endpoint"""
+    username = session.get('username', 'unknown')
+    session.clear()
+    logger.info(f"User {username} logged out")
+    return jsonify({'success': True, 'message': 'Logout successful'})
+
+@app.route('/auth/status')
+def auth_status():
+    """Check authentication status"""
+    return jsonify({
+        'authenticated': session.get('authenticated', False),
+        'username': session.get('username', None)
+    })
+
 
 @app.route('/api/execute', methods=['POST'])
+@limiter.limit("10 per minute")
+@require_auth
+@log_command_execution
 def execute():
     """Execute a command via API"""
     try:
@@ -173,6 +299,7 @@ def execute():
         return jsonify(result)
         
     except Exception as e:
+        logger.error(f"API execute error: {str(e)}")
         return jsonify({
             'success': False,
             'output': f'Server error: {str(e)}',
@@ -193,8 +320,48 @@ def status():
     return jsonify({
         'status': 'running',
         'allowed_commands': len(ALLOWED_COMMANDS),
-        'current_directory': os.getcwd()
+        'current_directory': os.getcwd(),
+        'version': '1.0.0',
+        'environment': config_name,
+        'authenticated': session.get('authenticated', False)
     })
+
+@app.route('/health')
+def health_check():
+    """Health check endpoint for load balancers"""
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': time.time(),
+        'uptime': time.time() - g.get('start_time', time.time())
+    })
+
+@app.route('/metrics')
+def metrics():
+    """Basic metrics endpoint"""
+    if not app.config['ENABLE_METRICS']:
+        return jsonify({'error': 'Metrics disabled'}), 403
+    
+    return jsonify({
+        'commands_executed': g.get('commands_executed', 0),
+        'uptime': time.time() - g.get('start_time', time.time()),
+        'memory_usage': os.popen('ps -o pid,ppid,cmd,%mem,%cpu -p ' + str(os.getpid())).read()
+    })
+
+@app.before_request
+def before_request():
+    """Set up request context"""
+    g.start_time = time.time()
+    g.commands_executed = g.get('commands_executed', 0)
+
+@app.after_request
+def after_request(response):
+    """Add security headers"""
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    response.headers['Content-Security-Policy'] = "default-src 'self'"
+    return response
 
 if __name__ == '__main__':
     # Create templates directory if it doesn't exist
