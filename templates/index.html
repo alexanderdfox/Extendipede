@@ -3,79 +3,126 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Extendipede Web</title>
+    <title>Extendipede Web - Command Pipeline Simulator</title>
+    <meta name="description" content="Interactive command pipeline simulator with real-time visualization and AC signal synchronization">
+    <meta name="keywords" content="extendipede, pipeline, simulator, command, visualization, web">
+    
+    <!-- Preload fonts for better performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>Extendipede Web</h1>
-            <p>Command Pipeline Simulator</p>
-            <p style="font-size: 0.9em; color: #888; margin-top: 10px;">
-                🌐 <strong>Website Fetching:</strong> Use curl commands to fetch real websites and see the content flow through the pipeline!
+            <h1>🚀 Extendipede Web</h1>
+            <p>Advanced Command Pipeline Simulator</p>
+            <p style="font-size: 1em; color: var(--text-secondary); margin-top: 15px; line-height: 1.6;">
+                🌐 <strong>Real-time Visualization:</strong> Execute commands and watch them flow through an animated pipeline with AC signal synchronization. 
+                Try <code>curl</code> commands to fetch real websites and see the magic happen!
             </p>
         </header>
 
-        <div class="controls">
+        <section class="controls" aria-label="Pipeline Configuration">
             <div class="control-group">
-                <label for="numStates">Pipeline States:</label>
-                <input type="number" id="numStates" value="100" min="1" max="200">
+                <label for="numStates">Pipeline States</label>
+                <input type="number" id="numStates" value="100" min="1" max="200" 
+                       aria-describedby="numStates-help">
+                <small id="numStates-help" style="color: var(--text-secondary); font-size: 0.8em;">
+                    Number of stages in the pipeline (1-200)
+                </small>
             </div>
             <div class="control-group">
-                <label for="frequency">AC Frequency (Hz):</label>
-                <input type="number" id="frequency" value="60" min="0.1" max="1000" step="0.1">
+                <label for="frequency">AC Frequency (Hz)</label>
+                <input type="number" id="frequency" value="60" min="0.1" max="1000" step="0.1"
+                       aria-describedby="frequency-help">
+                <small id="frequency-help" style="color: var(--text-secondary); font-size: 0.8em;">
+                    AC signal frequency in Hertz
+                </small>
             </div>
             <div class="control-group">
-                <label for="stepsPerCycle">Steps per Cycle:</label>
-                <input type="number" id="stepsPerCycle" value="40" min="10" max="100">
+                <label for="stepsPerCycle">Steps per Cycle</label>
+                <input type="number" id="stepsPerCycle" value="40" min="10" max="100"
+                       aria-describedby="steps-help">
+                <small id="steps-help" style="color: var(--text-secondary); font-size: 0.8em;">
+                    Animation steps per AC cycle
+                </small>
             </div>
             <div class="control-group">
-                <label for="sleepTime">Animation Speed (ms):</label>
-                <input type="number" id="sleepTime" value="50" min="10" max="500">
+                <label for="sleepTime">Animation Speed (ms)</label>
+                <input type="number" id="sleepTime" value="50" min="10" max="500"
+                       aria-describedby="speed-help">
+                <small id="speed-help" style="color: var(--text-secondary); font-size: 0.8em;">
+                    Delay between animation frames
+                </small>
             </div>
-        </div>
+        </section>
 
-        <div class="command-section">
+        <section class="command-section" aria-label="Command Execution">
             <div class="input-group">
                 <label for="commandInput">Extendipede></label>
-                <input type="text" id="commandInput" placeholder="Enter command..." autocomplete="off">
-                <button id="runButton">Run</button>
+                <input type="text" id="commandInput" placeholder="Enter command (e.g., ls, curl https://api.github.com)..." 
+                       autocomplete="off" aria-describedby="command-help">
+                <button id="runButton" type="button" aria-label="Execute command">
+                    <span>Run</span>
+                </button>
             </div>
-        </div>
+            <small id="command-help" style="color: var(--text-secondary); font-size: 0.85em; margin-top: 10px; display: block;">
+                💡 Try: <code>ls</code>, <code>pwd</code>, <code>curl https://httpbin.org/json</code>, or use the demo buttons below
+            </small>
+        </section>
 
-        <div class="pipeline-section">
-            <div class="ac-display">
+        <main class="pipeline-section" role="main">
+            <div class="ac-display" role="status" aria-live="polite">
                 <div class="ac-label">AC Voltage:</div>
-                <div class="ac-value" id="acValue">0.00</div>
+                <div class="ac-value" id="acValue" aria-label="AC voltage value">0.00</div>
             </div>
             
-            <div class="current-command">
+            <div class="current-command" role="status" aria-live="polite">
                 <div class="command-label">Running:</div>
-                <div class="command-value" id="currentCommand">-</div>
+                <div class="command-value" id="currentCommand" aria-label="Currently running command">-</div>
             </div>
 
-            <div class="pipeline-container">
+            <section class="pipeline-container" aria-label="Pipeline Visualization">
                 <h3>Extendipede Pipeline</h3>
-                <div id="pipelineStages" class="pipeline-stages"></div>
-            </div>
+                <div id="pipelineStages" class="pipeline-stages" 
+                     role="region" 
+                     aria-label="Pipeline stages visualization"
+                     aria-live="polite"></div>
+            </section>
 
-            <div class="output-section">
+            <section class="output-section" aria-label="Command Output">
                 <h3>Command Output</h3>
-                <div id="commandOutput" class="output-display">No command executed yet.</div>
-            </div>
-        </div>
+                <div id="commandOutput" class="output-display" 
+                     role="log" 
+                     aria-label="Command execution output"
+                     aria-live="polite">No command executed yet.</div>
+            </section>
+        </main>
 
-        <div class="status">
+        <footer class="status" role="contentinfo">
             <div class="status-item">
                 <span class="status-label">Status:</span>
-                <span id="status" class="status-value">Ready</span>
+                <span id="status" class="status-value" aria-live="polite">Ready</span>
             </div>
             <div class="status-item">
                 <span class="status-label">Cycle:</span>
-                <span id="cycleCount" class="status-value">0</span>
+                <span id="cycleCount" class="status-value" aria-live="polite">0</span>
             </div>
-        </div>
+            <div class="status-item">
+                <span class="status-label">Version:</span>
+                <span class="status-value">2.0.0</span>
+            </div>
+        </footer>
     </div>
+
+    <!-- Loading indicator -->
+    <div id="loadingIndicator" class="loading" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 9999;"></div>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
